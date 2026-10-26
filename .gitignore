@@ -1,0 +1,20 @@
+# Secrets - never commit these
+.streamlit/secrets.toml
+.env
+.env.*
+# The original notebook has an API key hardcoded in it
+MRI_API_Submission.ipynb
+*.ipynb
+
+# MRI data
+data/
+*.mri.txt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/

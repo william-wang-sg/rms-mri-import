@@ -1,0 +1,12 @@
+.git
+.github
+.devcontainer
+.streamlit/secrets.toml
+.env
+*.ipynb
+tests
+__pycache__
+.venv
+.pytest_cache
+.ruff_cache
+data

@@ -1,0 +1,14 @@
+[theme]
+base = "light"
+primaryColor = "#1B5E8C"
+backgroundColor = "#F3F5F7"
+secondaryBackgroundColor = "#E3E9EE"
+textColor = "#14212B"
+font = "sans serif"
+
+[server]
+maxUploadSize = 500          # MB; MRI location files can be large
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false
