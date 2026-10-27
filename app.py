@@ -92,6 +92,10 @@ def init_state() -> None:
     pending = st.session_state.pop("_pending_portfolio", None)
     if pending:
         st.session_state["portfolio_id"] = pending
+    # A finished action asked for its confirmation to be unticked; same timing rule as above.
+    spent = st.session_state.pop("_spent_confirmation", None)
+    if spent:
+        st.session_state[spent] = False
 
 
 def keep_valid(key: str, options) -> None:
@@ -115,16 +119,14 @@ def fetch(label: str, state_key: str, fn) -> bool:
             return False
 
 
-def clear_confirmation(key: str) -> None:
-    """Button callback: every confirmation covers one action, so uncheck it when the action starts."""
-    st.session_state[key] = False
-
-
-def run_action(key: str, title: str, fn):
+def run_action(key: str, title: str, fn, confirm_key: str):
     """Run a long action with live progress, keep its log for later reruns, return the result.
 
     fn receives an RmsClient wired to the live log and progress display. Returns None on failure.
+    Every confirmation covers one action, so confirm_key is unticked on the next run. It can't
+    be unticked from the button's on_click: that disables the button before the click is read.
     """
+    st.session_state["_spent_confirmation"] = confirm_key
     lines: list[str] = []
     last_progress = {"text": ""}
     with st.status(title, expanded=True) as box:
@@ -271,8 +273,7 @@ def tab_import(target: Target) -> None:
     if reason:
         st.info(reason)
 
-    clicked = st.button("Import and geocode", type="primary", disabled=bool(reason) or not confirm,
-                        on_click=clear_confirmation, args=("confirm_import",))
+    clicked = st.button("Import and geocode", type="primary", disabled=bool(reason) or not confirm)
     if not clicked:
         show_last("import")
         return
@@ -290,6 +291,7 @@ def tab_import(target: Target) -> None:
             "import", "Importing MRI files",
             lambda c: c.import_mri(paths["accounts"], paths["locations"], target.edm, name,
                                    number, create_portfolio=creating),
+            "confirm_import",
         )
     if result:
         # Refresh the sidebar list so the portfolio can be selected for the next steps.
@@ -298,7 +300,7 @@ def tab_import(target: Target) -> None:
             st.session_state["_pending_portfolio"] = str(result["portfolio_id"])
         except Exception:
             pass
-        st.rerun()
+    st.rerun()
 
 
 def tab_models(target: Target) -> None:
@@ -309,8 +311,7 @@ def tab_models(target: Target) -> None:
     reason = blocker(target)
     if reason:
         st.info(reason)
-    if not st.button("Run models", type="primary", disabled=bool(reason) or not confirm,
-                     on_click=clear_confirmation, args=("confirm_models",)):
+    if not st.button("Run models", type="primary", disabled=bool(reason) or not confirm):
         show_last("models")
         return
 
@@ -320,7 +321,8 @@ def tab_models(target: Target) -> None:
             client.log(f"{model}: {info['status']} (analysis ID {info['analysis_id']})")
         return results
 
-    run_action("models", "Running catastrophe models", work)
+    run_action("models", "Running catastrophe models", work, "confirm_models")
+    st.rerun()
 
 
 def tab_group(target: Target) -> None:
@@ -331,12 +333,13 @@ def tab_group(target: Target) -> None:
     reason = blocker(target)
     if reason:
         st.info(reason)
-    if not st.button("Group analyses", type="primary", disabled=bool(reason) or not confirm,
-                     on_click=clear_confirmation, args=("confirm_group",)):
+    if not st.button("Group analyses", type="primary", disabled=bool(reason) or not confirm):
         show_last("group")
         return
     run_action("group", "Grouping analyses", lambda c: c.group_analyses(
-        int(target.portfolio["id"]), target.portfolio["name"], target.edm, target.run_id))
+        int(target.portfolio["id"]), target.portfolio["name"], target.edm, target.run_id),
+        "confirm_group")
+    st.rerun()
 
 
 def tab_export(target: Target) -> None:
@@ -371,13 +374,14 @@ def tab_export(target: Target) -> None:
         reason = "Choose a Data Bridge server and an RDM database."
     if reason:
         st.info(reason)
-    if not st.button("Export to RDM", type="primary", disabled=bool(reason) or not confirm,
-                     on_click=clear_confirmation, args=("confirm_export",)):
+    if not st.button("Export to RDM", type="primary", disabled=bool(reason) or not confirm):
         show_last("export")
         return
     run_action("export", "Exporting to RDM", lambda c: c.export_to_rdm(
         int(target.portfolio["id"]), target.portfolio["name"], target.edm, target.run_id,
-        server_id, database_id, str(options[database_id].get("databaseName", ""))))
+        server_id, database_id, str(options[database_id].get("databaseName", ""))),
+        "confirm_export")
+    st.rerun()
 
 
 def tab_accumulation(target: Target) -> None:
@@ -399,15 +403,16 @@ def tab_accumulation(target: Target) -> None:
     chosen = None
     for column, level in zip(columns, ACCUMULATION_PROFILE_SETS):
         if column.button(f"Run {level.lower()} accumulation", disabled=bool(reason) or not confirm,
-                         key=f"acc_{level}", on_click=clear_confirmation,
-                         args=("confirm_accumulation",)):
+                         key=f"acc_{level}"):
             chosen = level
     if chosen is None:
         show_last("accumulation")
         return
     run_action("accumulation", f"Running {chosen.lower()} accumulation",
                lambda c: c.run_accumulation(chosen, target.portfolio["uri"],
-                                            target.portfolio["name"], currency, perspective))
+                                            target.portfolio["name"], currency, perspective),
+               "confirm_accumulation")
+    st.rerun()
 
 
 # --------------------------------------------------------------------------------------
