@@ -49,6 +49,14 @@ docker run -p 8501:8501 -e RMS_API_KEY=... -e APP_PASSWORD=... rms-mri-import
 ```
 Set the same two variables in your host's secret store. The container listens on port 8501.
 
+**Databricks Apps** (runs inside your Databricks workspace)
+1. Store the two values as secrets in a Databricks secret scope.
+2. Create an app in your workspace and deploy from this repo (for example through a Git folder). `app.yaml` holds the start command.
+3. In the app's settings, add two **secret** resources with the keys `rms-api-key` and `app-password`, pointing at those secrets. `app.yaml` passes them to the app as `RMS_API_KEY` and `APP_PASSWORD`.
+4. The workspace needs outbound network access to the RMS API.
+
+Not tested on Databricks yet. Check the current Databricks Apps docs if a step differs.
+
 **GitHub Codespaces** (no hosting; run it in a browser-based dev environment)
 Add `RMS_API_KEY` and `APP_PASSWORD` as Codespaces secrets, open the repo in a codespace, and run `streamlit run app.py`. The port opens as a private preview.
 

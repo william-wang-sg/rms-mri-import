@@ -1,0 +1,7 @@
+command: ["streamlit", "run", "app.py"]
+env:
+  # "valueFrom" names a secret resource added to the app in the Databricks UI.
+  - name: RMS_API_KEY
+    valueFrom: rms-api-key
+  - name: APP_PASSWORD
+    valueFrom: app-password
